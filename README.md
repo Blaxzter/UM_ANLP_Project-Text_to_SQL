@@ -12,5 +12,5 @@ The project related files required for the programming stuff
 
 ## Authors 
 - Abraham, Frederic
-- Franzoni Darnois, Guillaume (try)
+- Franzoni Darnois, Guillaume
 - Ruppenthal, Yannick
