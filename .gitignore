@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+.py[cod]
+*.jsonl
+__pycache__/
+data/
+annotated/
