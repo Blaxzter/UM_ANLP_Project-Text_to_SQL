@@ -130,7 +130,6 @@ dmypy.json
 
 
 .py[cod]
-*.jsonl
 __pycache__/
 annotated/
 
