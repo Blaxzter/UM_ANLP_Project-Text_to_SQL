@@ -16,7 +16,6 @@ class WikiSQLDataset(Dataset):
         self.pad_length = pad_length
 
         self.req_prepared = []
-        self.full_requests = []
 
         self.QA_requests = []
 
@@ -52,13 +51,12 @@ class WikiSQLDataset(Dataset):
                     SELECT_AGG = select_agg_target,
                     WHERE = where_target,
                     WHERE_CONDITIONS = where_conditions_target,
-                    WHERE_VALUE = torch.tensor(_qa_targets)
+                    WHERE_VALUE = _qa_targets
                 )
             ))
-            self.full_requests.append(req)
 
     def get_full_request_by_id(self, req_id):
-        return self.full_requests[req_id]
+        return self.requests[req_id]
 
     def __len__(self):
         return len(self.req_prepared)

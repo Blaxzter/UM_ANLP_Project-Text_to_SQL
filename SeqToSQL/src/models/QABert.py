@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from torch import nn, optim
@@ -35,7 +36,10 @@ class QABertTrainer:
 
     def __init__(self, device, dataset):
         self.qa_bert = QABert(1).to(device)
-        self.loss_function = nn.NLLLoss().to(device)
+
+        self.loss_function1 = nn.NLLLoss().to(device)
+        self.loss_function2 = nn.NLLLoss().to(device)
+
         self.optimizer = optim.Adam(self.qa_bert.parameters(), lr = 0.01)
         self.scheduler = get_linear_schedule_with_warmup(
             self.optimizer,
@@ -43,7 +47,8 @@ class QABertTrainer:
             num_training_steps = len(dataset)
         )
         self.num_examples = len(dataset)
-        self.losses = []
+        self.start_losses = []
+        self.end_losses = []
         self.correct_predictions = 0
 
     def train_model_step(self, data, device):
@@ -77,14 +82,15 @@ class QABertTrainer:
         self.correct_predictions += 1 if start_id == targets[0] and end_id == targets[1] else 0
 
         # todo utilising two losses doesnt work ._.
-        start_loss = self.loss_function(start_softmax, targets[0].view((1, 1)))
-        end_loss = self.loss_function(end_softmax, targets[1].view((1, 1)))
+        start_loss = self.loss_function1(start_softmax, targets[0].view((1, 1)))
+        end_loss = self.loss_function2(end_softmax, targets[1].view((1, 1)))
 
-        self.losses.append(start_loss.item())
-        self.losses.append(end_loss.item())
+        self.start_losses.append(start_loss.item())
+        self.end_losses.append(end_loss.item())
 
-        start_loss.backward()
-        end_loss.backward()
+        loss = start_loss + end_loss
+
+        loss.backward()
 
     def step(self):
         nn.utils.clip_grad_norm_(self.qa_bert.parameters(), max_norm = 1.0)
@@ -93,4 +99,4 @@ class QABertTrainer:
         self.optimizer.zero_grad()
 
     def report_error(self, sent_cnt):
-        print(f'Selection Ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
+        print(f'QA Question: Correct predictions: {self.correct_predictions / sent_cnt}, mean start loss: {np.mean(self.start_losses)}, mean end loss {np.mean(self.end_losses)}')

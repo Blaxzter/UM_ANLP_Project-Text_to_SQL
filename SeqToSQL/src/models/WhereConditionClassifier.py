@@ -55,6 +55,15 @@ class WhereConditionClassifierTrainer:
 
             self.calc_loss(where_outputs, where_cond_target)
 
+    def get_prediction(self, input_ids, attention_mask, token_type_ids, where_column):
+        outputs = self.predict(
+                input_ids = input_ids,
+                attention_mask = attention_mask,
+                token_type_ids = token_type_ids,
+                where_column = where_column
+            )
+        return torch.argmax(outputs, dim = 1)
+
     def predict(self, input_ids, attention_mask, token_type_ids, where_column):
         outputs = self.where_cond_classifier(
             input_ids = input_ids.squeeze(0)[where_column].view(-1),
