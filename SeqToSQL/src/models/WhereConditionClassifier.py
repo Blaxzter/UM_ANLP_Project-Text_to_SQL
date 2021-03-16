@@ -90,7 +90,7 @@ class WhereConditionClassifierTrainer:
         self.optimizer.zero_grad()
 
     def report_error(self, sent_cnt):
-        print(f'Selection Ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
+        print(f'Where condition Ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
 
     def get_model(self):
         return self.where_cond_classifier
