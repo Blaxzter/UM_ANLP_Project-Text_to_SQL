@@ -54,8 +54,11 @@ class WhereNumberClassifierTrainer:
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         # here we need only the length of the conditions
         where_numb_targets = data["target"]['WHERE_NUM_CONDITIONS'].to(device)
-        where_columns = data["target"]['WHERE'].to(device)
-        for where_column, where_numb_target in zip(where_columns, where_numb_targets):
+        where_columns = data["target"]['WHERE']
+        num_where_columns = torch.count_nonzero(where_columns).item()
+        target_idx = torch.topk(where_columns, k=num_where_columns, dim=1)[1].to(device)
+
+        for where_column, where_numb_target in zip(target_idx, where_numb_targets):
             where_outputs = self.predict(
                 input_ids = input_ids,
                 attention_mask = attention_mask,

@@ -14,7 +14,7 @@ from models.WhereNumberClassifier import WhereNumberClassifierTrainer
 from models.WhereRanker import WhereRankerTrainer
 
 
-def train_epoch(models: Dict, data_loader, device, batch_size=16):
+def train_epoch(models: Dict, data_loader, device, batch_size=16, report_size = 64):
     # Set the models to train mode
     map(lambda x: x.train(), models)
 
@@ -40,7 +40,7 @@ def train_epoch(models: Dict, data_loader, device, batch_size=16):
             if (sent_cnt % batch_size) == 0 or sent_cnt == len(data_loader) - 1:
                 map(lambda x: x.step(), models)
 
-            if (sent_cnt % batch_size) == 0 or sent_cnt == len(data_loader) - 1:
+            if (sent_cnt % report_size) == 0 or sent_cnt == len(data_loader) - 1:
                 map(lambda x: x.report_error(), models)
 
 
