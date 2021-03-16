@@ -62,7 +62,7 @@ class QABertTrainer:
                 token_type_ids = where_token_type_ids[cond_num],
             )
 
-            self.calc_loss(start_softmax, end_softmax, where_cond_target.view(-1))
+            self.calc_loss(start_softmax, end_softmax, where_cond_target)
 
     def predict(self, input_ids, attention_mask, token_type_ids):
         start_softmax, end_softmax = self.qa_bert(

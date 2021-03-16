@@ -8,6 +8,7 @@ from models.SelectRanker import SelectRankerTrainer
 from models.WhereRanker import WhereRankerTrainer
 from models.WhereConditionClassifier import WhereConditionClassifierTrainer
 from models.AggregationClassifier import AggregationClassifierTrainer
+from models.WhereNumberClassifier import WhereNumberClassifierTrainer
 from train.Trainer import train_epoch
 
 if __name__ == '__main__':
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     dev_data_loader = get_data_loader(data_type = 'dev', tokenizer = tokenizer, batch_size = 1)
 
     models = dict(
+        where_numb_class_trainer = WhereNumberClassifierTrainer(device, dev_data_loader),
         selection_trainer = SelectRankerTrainer(device, dev_data_loader),
         agg_class_trainer = AggregationClassifierTrainer(device, dev_data_loader),
         where_ranker_trainer = WhereRankerTrainer(device, dev_data_loader),

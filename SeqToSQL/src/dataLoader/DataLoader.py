@@ -20,12 +20,13 @@ class WikiSQLDataset(Dataset):
         self.QA_requests = []
 
         for req in tqdm(requests):
-            _qa_values, _qa_targets = get_question_answers_for_where_value_def_length(req, self.tokenizer, self.pad_length)
+            _qa_values, _qa_targets, _qa_num_cond = get_question_answers_for_where_value_def_length(req, self.tokenizer, self.pad_length)
             _qa_input_ids = [req_embedding['input_ids'] for req_embedding in _qa_values]
             _qa_token_type_ids = [req_embedding['token_type_ids'] for req_embedding in _qa_values]
             _qa_attention_mask = [req_embedding['attention_mask'] for req_embedding in _qa_values]
 
             _qa_where_value = torch.tensor(_qa_targets)
+            _qa_where_num_conditions = torch.tensor(_qa_num_cond)
 
             _req_embeddings = get_question_answers_def_length(req, self.tokenizer, self.pad_length)
             _input_ids = [req_embedding['input_ids'] for req_embedding in _req_embeddings]
@@ -51,6 +52,7 @@ class WikiSQLDataset(Dataset):
                     SELECT_AGG = select_agg_target,
                     WHERE = where_target,
                     WHERE_CONDITIONS = where_conditions_target,
+                    WHERE_NUM_CONDITIONS = _qa_where_num_conditions ,
                     WHERE_VALUE = _qa_targets
                 )
             ))

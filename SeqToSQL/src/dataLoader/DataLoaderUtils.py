@@ -106,4 +106,4 @@ def get_question_answers_for_where_value_def_length(request, tokenizer, pad_max_
 
         target_list.append([startIdx, endIdx])
 
-    return input_list, target_list
+    return input_list, target_list, len(conditions)

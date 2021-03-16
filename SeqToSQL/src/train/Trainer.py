@@ -18,6 +18,8 @@ def train_epoch(models: Dict, data_loader, device, batch_size = 16):
             attention_mask = d["attention_mask"].to(device)
             token_type_ids = d["token_type_ids"].to(device)
 
+            models["where_numb_class_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
+
             models["selection_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
             models["agg_class_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
 
