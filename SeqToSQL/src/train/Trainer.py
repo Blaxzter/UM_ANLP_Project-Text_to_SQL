@@ -30,3 +30,4 @@ def train_epoch(models: Dict, data_loader, device, batch_size = 16):
 
             if (sent_cnt % batch_size) == 0 or sent_cnt == len(data_loader) - 1:
                 map(lambda x: x.report_error(), models)
+

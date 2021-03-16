@@ -69,7 +69,7 @@ def get_question_answers_for_where_value_def_length(request, tokenizer, pad_max_
     # cond_ops = ['=', '>', '<', 'OP']
 
     space_token = ' '
-    req_question = request['question']  # might need to be tokenized
+    req_question = request['question']
 
     conditions = request['sql']['conds']
     for i, cond in enumerate(conditions):
@@ -77,8 +77,7 @@ def get_question_answers_for_where_value_def_length(request, tokenizer, pad_max_
         opp_name = cond_dict[cond[1]]
         target = cond[2]
         value_question = column_name + space_token + opp_name
-        # print(f"target:{target}")
-        # print(f"question: {req_question}")
+
         embedding = tokenizer.encode_plus(
             text = value_question,
             text_pair = req_question,
@@ -89,14 +88,15 @@ def get_question_answers_for_where_value_def_length(request, tokenizer, pad_max_
             return_overflowing_tokens = True,
             return_attention_mask = True,
         )
-        # print(f"embedding:{embedding}")
 
         input_list.append(embedding)
-        encoded_target = tokenizer.encode(text = str(target), add_special_tokens = True)[1:-1]
-        startIdx = 0
-        endIdx = 0
-        # print(f"target:{target}")
-        # print(f"target_emb:{encoded_target}")
+        encoded_target = tokenizer.encode(
+            text = str(target).lower() if (str(target).lower() in req_question) else str(target),
+            add_special_tokens = False
+        )
+        startIdx = -1
+        endIdx = -1
+
         sll = len(encoded_target)
         for ind in (i for i, e in enumerate(embedding['input_ids']) if e == encoded_target[0]):
             if embedding['input_ids'][ind:ind + sll] == encoded_target:
@@ -104,17 +104,6 @@ def get_question_answers_for_where_value_def_length(request, tokenizer, pad_max_
                 endIdx = ind + sll
                 break
 
-        # this is nessecary for some targets are uppercase while in the questions they are lowercase
-        if startIdx == 0 and endIdx == 0:
-            encoded_target = tokenizer.encode(text = str(target).lower(), add_special_tokens = True)[1:-1]
-            sll = len(encoded_target)
-            for ind in (i for i, e in enumerate(embedding['input_ids']) if e == encoded_target[0]):
-                if embedding['input_ids'][ind:ind + sll] == encoded_target:
-                    startIdx = ind
-                    endIdx = ind + sll
-                    break
-
-        # print(f"start:{startIdx}, endidx: {endIdx}")
         target_list.append([startIdx, endIdx])
 
     return input_list, target_list
