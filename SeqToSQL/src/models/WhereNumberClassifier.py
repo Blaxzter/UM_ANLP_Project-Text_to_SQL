@@ -101,3 +101,6 @@ class WhereNumberClassifierTrainer:
 
     def report_error(self, sent_cnt):
         print(f'Number of Where Conditions: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
+
+    def get_model(self):
+        return self.where_numb_classifier
