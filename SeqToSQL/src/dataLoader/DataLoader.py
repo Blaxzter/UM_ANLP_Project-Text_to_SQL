@@ -34,7 +34,13 @@ class WikiSQLDataset(Dataset):
             _attention_mask = [req_embedding['attention_mask'] for req_embedding in _req_embeddings]
 
             select_target = torch.tensor([req['sql']['sel']], dtype=torch.long)
-            where_target = torch.tensor([cond[0] for cond in req['sql']['conds']], dtype=torch.long)
+
+            where_target = np.zeros(len(req['columns']))
+            for where_column_index in [cond[0] for cond in req['sql']['conds']]:
+                where_target[where_column_index] = 1
+            where_target = torch.tensor(where_target, dtype = torch.float)
+
+            # where_target = torch.tensor([cond[0] for cond in req['sql']['conds']], dtype=torch.long)
             where_conditions_target = torch.tensor([cond[1] for cond in req['sql']['conds']], dtype=torch.long)
             select_agg_target = torch.tensor([req['sql']['agg']], dtype=torch.long)
 
@@ -52,7 +58,7 @@ class WikiSQLDataset(Dataset):
                     SELECT_AGG = select_agg_target,
                     WHERE = where_target,
                     WHERE_CONDITIONS = where_conditions_target,
-                    WHERE_NUM_CONDITIONS = _qa_where_num_conditions ,
+                    WHERE_NUM_CONDITIONS = _qa_where_num_conditions,
                     WHERE_VALUE = _qa_targets
                 )
             ))

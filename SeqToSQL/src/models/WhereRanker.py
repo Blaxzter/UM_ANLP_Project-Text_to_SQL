@@ -32,7 +32,7 @@ class WhereRankerTrainer:
 
     def __init__(self, device, dataset):
         self.where_ranker = WhereRanker().to(device)
-        self.loss_function = nn.NLLLoss().to(device)
+        self.loss_function = nn.BCEWithLogitsLoss().to(device)
         self.optimizer = optim.Adam(self.where_ranker.parameters(), lr = 0.01)
         self.scheduler = get_linear_schedule_with_warmup(
             self.optimizer,
@@ -64,10 +64,12 @@ class WhereRankerTrainer:
         self.where_ranker = self.where_ranker.train()
 
     def calc_loss(self, outputs, targets):
-        top_where_selection = torch.topk(outputs, k=len(targets), dim=1)[1]
-        self.correct_predictions += 1 if top_where_selection == targets else 0
-        loss = self.loss_function(outputs, targets.view(-1))
-        self.losses.append(loss.item())
+        num_where_columns = torch.count_nonzero(targets).item()
+        target_idx = torch.topk(targets, k=num_where_columns, dim=1)[1]
+        top_where_selection = torch.topk(outputs, k=num_where_columns, dim=1)[1]
+
+        self.correct_predictions += 1 if torch.all(top_where_selection == target_idx) else 0
+        loss = self.loss_function(outputs, targets)
 
         loss.backward()
 
