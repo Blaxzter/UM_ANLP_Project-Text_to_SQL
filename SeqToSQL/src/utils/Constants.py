@@ -1,6 +1,7 @@
 from transformers import BertTokenizer
 
 data_folder = '../data'
+save_folder = '../checkpoint'
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
 

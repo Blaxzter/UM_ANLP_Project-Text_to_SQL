@@ -100,3 +100,6 @@ class QABertTrainer:
 
     def report_error(self, sent_cnt):
         print(f'QA Question: Correct predictions: {self.correct_predictions / sent_cnt}, mean start loss: {np.mean(self.start_losses)}, mean end loss {np.mean(self.end_losses)}')
+
+    def get_model(self):
+        return self.qa_bert
