@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from torch import nn, optim
+from torch.nn import CrossEntropyLoss
 from transformers import get_linear_schedule_with_warmup, BertModel, BertForQuestionAnswering
 
 from utils.Constants import PRE_TRAINED_MODEL_NAME
@@ -31,6 +32,7 @@ class QABert(nn.Module):
 
         return start_softmax, end_softmax
 
+
 class QABertPreTrained(nn.Module):
 
     def __init__(self):
@@ -45,6 +47,7 @@ class QABertPreTrained(nn.Module):
         )
 
         return outputs['start_logits'], outputs['end_logits']
+
 
 class QABertTrainer:
 
@@ -61,8 +64,7 @@ class QABertTrainer:
             num_training_steps = len(dataset)
         )
         self.num_examples = len(dataset)
-        self.start_losses = []
-        self.end_losses = []
+        self.losses = []
         self.correct_predictions = 0
 
     def train_model_step(self, data, device):
@@ -70,14 +72,15 @@ class QABertTrainer:
         where_attention_mask = data["qa_attention_mask"].to(device)
         where_token_type_ids = data["qa_token_type_ids"].to(device)
         for cond_num, where_cond_target in enumerate(data["target"]['WHERE_VALUE']):
-            start_softmax, end_softmax = self.predict(
-                input_ids = where_input_ids.squeeze(0)[cond_num].view(-1),
-                attention_mask = where_attention_mask.squeeze(0)[cond_num].view(-1),
-                token_type_ids = where_token_type_ids.squeeze(0)[cond_num].view(-1),
-            )
 
             target_0 = where_cond_target[0].to(device)
             target_1 = where_cond_target[1].to(device)
+
+            start_softmax, end_softmax = self.predict(
+                input_ids = where_input_ids.squeeze(0)[cond_num].view(-1),
+                attention_mask = where_attention_mask.squeeze(0)[cond_num].view(-1),
+                token_type_ids = where_token_type_ids.squeeze(0)[cond_num].view(-1)
+            )
 
             self.calc_loss(start_softmax, end_softmax, target_0, target_1)
 
@@ -92,27 +95,23 @@ class QABertTrainer:
     def train(self):
         self.qa_bert = self.qa_bert.train()
 
-    def calc_loss(self, start_softmax, end_softmax, targets):
-        start_id = torch.argmax(start_softmax)
-        end_id = torch.argmax(end_softmax)
+    def calc_loss(self, start_logits, end_logits, start_positions, end_positions):
+        start_id = torch.argmax(start_logits)
+        end_id = torch.argmax(end_logits)
 
-        self.correct_predictions += 1 if start_id == targets[0] and end_id == targets[1] else 0
-    def calc_loss(self, start_softmax, end_softmax, target_0, target_1):
-        start_id = torch.argmax(start_softmax, dim = 1)
-        end_id = torch.argmax(end_softmax, dim = 1)
+        self.correct_predictions += 1 if start_id == start_positions and end_id == end_positions else 0
 
-        self.correct_predictions += 1 if start_id == target_0 and end_id == target_1 else 0
+        # sometimes the start/end positions are outside our model inputs, we ignore these terms
+        ignored_index = start_logits.size(1)
+        start_positions.clamp_(0, ignored_index)
+        end_positions.clamp_(0, ignored_index)
 
-        # todo utilising two losses doesnt work ._.
-        start_loss = self.loss_function1(start_softmax, target_0.view((1, 1)))
-        end_loss = self.loss_function2(end_softmax, target_1.view((1, 1)))
+        loss_fct = CrossEntropyLoss(ignore_index = ignored_index)
+        start_loss = loss_fct(start_logits, start_positions)
+        end_loss = loss_fct(end_logits, end_positions)
+        total_loss = (start_loss + end_loss) / 2
 
-        self.start_losses.append(start_loss.item())
-        self.end_losses.append(end_loss.item())
-
-        loss = start_loss + end_loss
-
-        loss.backward()
+        total_loss.backward()
 
     def step(self):
         nn.utils.clip_grad_norm_(self.qa_bert.parameters(), max_norm = 1.0)

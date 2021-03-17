@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch import nn, optim
-from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup
+from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup, BertModel
 
 from utils.Constants import PRE_TRAINED_MODEL_NAME, NUM_AGGREGATIONS, NUM_WHERE_CONDITIONS
 
@@ -9,6 +9,27 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME, NUM_AGGREGATIONS, NUM_WHERE_
 class WhereConditionClassifier(nn.Module):
     def __init__(self):
         super(WhereConditionClassifier, self).__init__()
+        self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        self.drop = nn.Dropout(p = 0.3)
+        self.linear = nn.Linear(self.bert.config.hidden_size, NUM_WHERE_CONDITIONS)
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.bert(
+            input_ids = input_ids.unsqueeze(0),
+            attention_mask = attention_mask.unsqueeze(0),
+            token_type_ids = token_type_ids.unsqueeze(0)
+        )
+        output = self.drop(outputs.pooler_output)
+        linear = self.linear(output)
+        softmax = torch.softmax(
+            torch.sigmoid(linear), dim = 1
+        )
+        return softmax
+
+
+class WhereConditionClassifierPreTrained(nn.Module):
+    def __init__(self):
+        super(WhereConditionClassifierPreTrained, self).__init__()
         self.bert = BertForSequenceClassification.from_pretrained(
             PRE_TRAINED_MODEL_NAME,
             num_labels = NUM_AGGREGATIONS,
@@ -28,7 +49,7 @@ class WhereConditionClassifier(nn.Module):
 class WhereConditionClassifierTrainer:
 
     def __init__(self, device, dataset):
-        self.where_cond_classifier = WhereConditionClassifier().to(device)
+        self.where_cond_classifier = WhereConditionClassifierPreTrained().to(device)
         self.loss_function = nn.NLLLoss().to(device)
         self.optimizer = optim.Adam(self.where_cond_classifier.parameters(), lr = 0.01)
         self.scheduler = get_linear_schedule_with_warmup(
