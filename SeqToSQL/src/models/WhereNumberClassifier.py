@@ -28,7 +28,7 @@ class WhereNumberClassifier(nn.Module):
         linear_pnciq = self.linearPNCIQ(output_pnciq)
         sig_pnciq = torch.sigmoid(linear_pnciq)
 
-        resulting = torch.sum(sm_pciq.view(-1) * torch.transpose(sig_pnciq, 0, 1), dim = 1)
+        resulting = torch.matmul(sm_pciq.view(-1), sig_pnciq)
 
         softmax_result = torch.softmax(resulting, dim=0)
 
