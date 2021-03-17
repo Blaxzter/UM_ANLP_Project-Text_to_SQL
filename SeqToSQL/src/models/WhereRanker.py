@@ -52,6 +52,16 @@ class WhereRankerTrainer:
         )
         self.calc_loss(where_outputs, where_targets)
 
+    def parse_input(self, d):
+        input_ids = d["input_ids"]
+        attention_mask = d["attention_mask"]
+        token_type_ids = d["token_type_ids"]
+        return (
+            input_ids,
+            attention_mask,
+            token_type_ids
+        )
+
     def predict(self, input_ids, attention_mask, token_type_ids):
         outputs = self.where_ranker(
             input_ids = input_ids,

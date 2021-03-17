@@ -62,6 +62,16 @@ class WhereNumberClassifierTrainer:
 
         self.calc_loss(where_outputs, where_numb_targets)
 
+    def parse_input(self, d):
+        input_ids = d["input_ids"]
+        attention_mask = d["attention_mask"]
+        token_type_ids = d["token_type_ids"]
+        return (
+            input_ids,
+            attention_mask,
+            token_type_ids
+        )
+
     def get_prediction(self, input_ids, attention_mask, token_type_ids):
         outputs = self.predict(
                 input_ids = input_ids,

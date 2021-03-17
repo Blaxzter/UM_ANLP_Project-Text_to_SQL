@@ -84,6 +84,16 @@ class QABertTrainer:
 
             self.calc_loss(start_softmax, end_softmax, target_0, target_1)
 
+    def parse_input(self, d):
+        input_ids = d["qa_input_ids"]
+        attention_mask = d["qa_attention_mask"]
+        token_type_ids = d["qa_token_type_ids"]
+        return (
+            input_ids.squeeze(0)[0].view(-1),
+            attention_mask.squeeze(0)[0].view(-1),
+            token_type_ids.squeeze(0)[0].view(-1),
+        )
+
     def predict(self, input_ids, attention_mask, token_type_ids):
         start_softmax, end_softmax = self.qa_bert(
             input_ids = input_ids,
