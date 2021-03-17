@@ -45,7 +45,10 @@ class WhereConditionClassifierTrainer:
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         where_cond_targets = data["target"]['WHERE_CONDITIONS'].to(device)
         where_columns = data["target"]['WHERE'].to(device)
-        for where_column, where_cond_target in zip(where_columns, where_cond_targets):
+        num_where_columns = torch.count_nonzero(where_columns).item()
+        target_idx = torch.topk(where_columns, k=num_where_columns, dim=1)[1].to(device)
+
+        for where_column, where_cond_target in zip(target_idx.view(-1), where_cond_targets.view(-1)):
             where_outputs = self.predict(
                 input_ids = input_ids,
                 attention_mask = attention_mask,

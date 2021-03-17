@@ -16,24 +16,23 @@ class WhereNumberClassifier(nn.Module):
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         outputs = self.bert(
-            input_ids=input_ids.unsqueeze(0),
-            attention_mask=attention_mask.unsqueeze(0),
-            token_type_ids=token_type_ids.unsqueeze(0)
+            input_ids=input_ids.squeeze(0),
+            attention_mask=attention_mask.squeeze(0),
+            token_type_ids=token_type_ids.squeeze(0)
         )
-        outputPCIQ = self.drop(outputs.pooler_output) #Pooler_output = HCLS
-        linearPCIQ = self.linearPCIQ(outputPCIQ)
-        smPCIQ = torch.softmax(linearPCIQ, dim=0)
+        output_pciq = self.drop(outputs.pooler_output) #Pooler_output = HCLS
+        linear_pciq = self.linearPCIQ(output_pciq)
+        sm_pciq = torch.softmax(linear_pciq, dim=0)
 
-        outputPNCIQ = self.drop(outputs.pooler_output)
-        linearPNCIQ = self.linearPNCIQ(outputPNCIQ)
-        sigPNCIQ = torch.sigmoid(linearPNCIQ)
+        output_pnciq = self.drop(outputs.pooler_output)
+        linear_pnciq = self.linearPNCIQ(output_pnciq)
+        sig_pnciq = torch.sigmoid(linear_pnciq)
 
+        resulting = torch.sum(sm_pciq.view(-1) * torch.transpose(sig_pnciq, 0, 1), dim = 1)
 
-        resulting = torch.matmul(smPCIQ, sigPNCIQ)
+        softmax_result = torch.softmax(resulting, dim=0)
 
-        softmaxResult = torch.softmax(resulting, dim=1)
-
-        return softmaxResult
+        return softmax_result
 
 
 class WhereNumberClassifierTrainer:
@@ -54,34 +53,28 @@ class WhereNumberClassifierTrainer:
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         # here we need only the length of the conditions
         where_numb_targets = data["target"]['WHERE_NUM_CONDITIONS'].to(device)
-        where_columns = data["target"]['WHERE']
-        num_where_columns = torch.count_nonzero(where_columns).item()
-        target_idx = torch.topk(where_columns, k=num_where_columns, dim=1)[1].to(device)
 
-        for where_column, where_numb_target in zip(target_idx, where_numb_targets):
-            where_outputs = self.predict(
-                input_ids = input_ids,
-                attention_mask = attention_mask,
-                token_type_ids = token_type_ids,
-                where_column = where_column
-            )
+        where_outputs = self.predict(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            token_type_ids = token_type_ids,
+        )
 
-            self.calc_loss(where_outputs, where_numb_target)
+        self.calc_loss(where_outputs, where_numb_targets)
 
-    def get_prediction(self, input_ids, attention_mask, token_type_ids, where_column):
+    def get_prediction(self, input_ids, attention_mask, token_type_ids):
         outputs = self.predict(
                 input_ids = input_ids,
                 attention_mask = attention_mask,
                 token_type_ids = token_type_ids,
-                where_column = where_column
             )
         return torch.argmax(outputs, dim = 1)
 
-    def predict(self, input_ids, attention_mask, token_type_ids, where_column):
+    def predict(self, input_ids, attention_mask, token_type_ids):
         outputs = self.where_numb_classifier(
-            input_ids = input_ids.squeeze(0)[where_column].view(-1),
-            attention_mask = attention_mask.squeeze(0)[where_column].view(-1),
-            token_type_ids = token_type_ids.squeeze(0)[where_column].view(-1),
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            token_type_ids = token_type_ids
         )
         return outputs
 
@@ -89,9 +82,9 @@ class WhereNumberClassifierTrainer:
         self.where_numb_classifier = self.where_numb_classifier.train()
 
     def calc_loss(self, outputs, targets):
-        pred_req_id = torch.argmax(outputs, dim = 1)
+        pred_req_id = torch.argmax(outputs, dim = 0)
         self.correct_predictions += 1 if pred_req_id == targets else 0
-        loss = self.loss_function(outputs, targets.view(-1))
+        loss = self.loss_function(outputs.unsqueeze(0), targets.view(-1))
         self.losses.append(loss.item())
 
         loss.backward()

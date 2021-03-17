@@ -17,9 +17,9 @@ class QABert(nn.Module):
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         outputs = self.bert(
-            input_ids = input_ids,
-            attention_mask = attention_mask,
-            token_type_ids = token_type_ids,
+            input_ids = input_ids.unsqueeze(0),
+            attention_mask = attention_mask.unsqueeze(0),
+            token_type_ids = token_type_ids.unsqueeze(0)
         )
         start_values = self.linearStart(outputs.last_hidden_state)
         # start_values_with_attention_mask = torch.mul(attention_mask, start_values.view(-1))
@@ -57,9 +57,9 @@ class QABertTrainer:
         where_token_type_ids = data["qa_token_type_ids"].to(device)
         for cond_num, where_cond_target in enumerate(data["target"]['WHERE_VALUE']):
             start_softmax, end_softmax = self.predict(
-                input_ids = where_input_ids[cond_num],
-                attention_mask = where_attention_mask[cond_num],
-                token_type_ids = where_token_type_ids[cond_num],
+                input_ids = where_input_ids.squeeze(0)[cond_num].view(-1),
+                attention_mask = where_attention_mask.squeeze(0)[cond_num].view(-1),
+                token_type_ids = where_token_type_ids.squeeze(0)[cond_num].view(-1),
             )
 
             self.calc_loss(start_softmax, end_softmax, where_cond_target)
