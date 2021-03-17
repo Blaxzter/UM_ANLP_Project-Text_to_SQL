@@ -32,11 +32,12 @@ def train_epoch(models: Dict, data_loader, device, batch_size=16, report_size = 
             metrics = ""
             for model_key in models:
                 models[model_key].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
-                models[model_key].step()
-                id, acc, loss = models[model_key].get_metric()
-                metrics = metrics + f' {id}[Acc: {acc}, Loss: {loss}], '
+                if (sent_cnt % batch_size) == 0 or sent_cnt == len(data_loader) - 1:
+                    models[model_key].step()
+                    id, acc, loss = models[model_key].get_metric()
+                    metrics = metrics + f' {id}[Acc: {acc}, Loss: {loss}], '
 
-                tepoch.set_postfix_str(metrics)
+                    tepoch.set_postfix_str(metrics)
             #models["where_numb_class_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
 
             #models["selection_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
