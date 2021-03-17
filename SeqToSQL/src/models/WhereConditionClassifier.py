@@ -7,9 +7,13 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME, NUM_AGGREGATIONS, NUM_WHERE_
 
 
 class WhereConditionClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, base_model = None):
         super(WhereConditionClassifier, self).__init__()
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        if base_model is None:
+            self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        else:
+            self.bert = base_model
+
         self.drop = nn.Dropout(p = 0.3)
         self.linear = nn.Linear(self.bert.config.hidden_size, NUM_WHERE_CONDITIONS)
 
@@ -32,7 +36,7 @@ class WhereConditionClassifierPreTrained(nn.Module):
         super(WhereConditionClassifierPreTrained, self).__init__()
         self.bert = BertForSequenceClassification.from_pretrained(
             PRE_TRAINED_MODEL_NAME,
-            num_labels = NUM_AGGREGATIONS,
+            num_labels = NUM_WHERE_CONDITIONS,
             output_attentions = False,
             output_hidden_states = False,
         )
@@ -48,8 +52,13 @@ class WhereConditionClassifierPreTrained(nn.Module):
 
 class WhereConditionClassifierTrainer:
 
-    def __init__(self, device, dataset):
-        self.where_cond_classifier = WhereConditionClassifierPreTrained().to(device)
+    def __init__(self, device, dataset, base_model=None, use_pretrained=True):
+        self.use_pretrained = use_pretrained
+        if self.use_pretrained:
+            self.where_cond_classifier = WhereConditionClassifierPreTrained().to(device)
+        else:
+            self.where_cond_classifier = WhereConditionClassifier(base_model).to(device)
+
         self.loss_function = nn.NLLLoss().to(device)
         self.optimizer = optim.Adam(self.where_cond_classifier.parameters(), lr = 0.01)
         self.scheduler = get_linear_schedule_with_warmup(
@@ -92,7 +101,10 @@ class WhereConditionClassifierTrainer:
             attention_mask = attention_mask.squeeze(0)[where_column].view(-1),
             token_type_ids = token_type_ids.squeeze(0)[where_column].view(-1),
         )
-        return outputs['logits']
+        if self.use_pretrained:
+            return outputs['logits']
+        else:
+            return outputs
 
     def train(self):
         self.where_cond_classifier = self.where_cond_classifier.train()

@@ -7,9 +7,12 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME
 
 
 class WhereRanker(nn.Module):
-    def __init__(self):
+    def __init__(self, base_model = None):
         super(WhereRanker, self).__init__()
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        if base_model is None:
+            self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        else:
+            self.bert = base_model
         self.drop = nn.Dropout(p=0.3)
         self.linear = nn.Linear(self.bert.config.hidden_size, 1)
 
@@ -30,8 +33,8 @@ class WhereRanker(nn.Module):
 
 class WhereRankerTrainer:
 
-    def __init__(self, device, dataset):
-        self.where_ranker = WhereRanker().to(device)
+    def __init__(self, device, dataset, base_model=None):
+        self.where_ranker = WhereRanker(base_model).to(device)
         self.loss_function = nn.BCEWithLogitsLoss().to(device)
         self.optimizer = optim.Adam(self.where_ranker.parameters(), lr = 0.01)
         self.scheduler = get_linear_schedule_with_warmup(
