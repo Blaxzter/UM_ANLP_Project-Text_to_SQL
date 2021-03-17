@@ -24,11 +24,11 @@ class QABert(nn.Module):
         )
         start_values = self.linearStart(outputs.last_hidden_state)
         # start_values_with_attention_mask = torch.mul(attention_mask, start_values.view(-1))
-        start_softmax = torch.softmax(start_values, dim = 1)
+        start_softmax = torch.log_softmax(start_values, dim = 1)
 
         end_values = self.linearEnd(outputs.last_hidden_state)
         # end_values_with_attention_mask = torch.mul(attention_mask, end_values.view(-1))
-        end_softmax = torch.softmax(end_values, dim = 1)
+        end_softmax = torch.log_softmax(end_values, dim = 1)
 
         return start_softmax, end_softmax
 

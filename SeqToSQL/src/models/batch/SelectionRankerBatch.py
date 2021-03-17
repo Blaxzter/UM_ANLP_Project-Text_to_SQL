@@ -22,7 +22,7 @@ class SelectionRankerBatch(nn.Module):
 
         output = self.drop(outputs.pooler_output)
         linear = self.linear(output.view(16, 5, 768))
-        softmax = torch.softmax(
+        softmax = torch.log_softmax(
             torch.sigmoid(linear),
             dim = 1
         )

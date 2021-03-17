@@ -30,7 +30,7 @@ class WhereNumberClassifier(nn.Module):
 
         resulting = torch.matmul(sm_pciq.view(-1), sig_pnciq)
 
-        softmax_result = torch.softmax(resulting, dim=0)
+        softmax_result = torch.log_softmax(resulting, dim=0)
 
         return softmax_result
 
