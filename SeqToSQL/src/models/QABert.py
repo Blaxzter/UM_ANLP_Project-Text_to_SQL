@@ -111,6 +111,8 @@ class QABertTrainer:
         end_loss = loss_fct(end_logits, end_positions)
         total_loss = (start_loss + end_loss) / 2
 
+        self.losses.append(total_loss)
+
         total_loss.backward()
 
     def step(self):

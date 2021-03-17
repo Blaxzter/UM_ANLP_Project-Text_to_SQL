@@ -7,9 +7,15 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME
 
 
 class SelectRanker(nn.Module):
-    def __init__(self):
+
+    def __init__(self, base_model = None):
         super(SelectRanker, self).__init__()
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+
+        if base_model is None:
+            self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        else:
+            self.bert = base_model
+
         self.drop = nn.Dropout(p=0.3)
         self.linear = nn.Linear(self.bert.config.hidden_size, 1)
 
@@ -30,8 +36,8 @@ class SelectRanker(nn.Module):
 
 class SelectRankerTrainer:
 
-    def __init__(self, device, dataset):
-        self.selection_ranker = SelectRanker().to(device)
+    def __init__(self, device, dataset, base_model = None):
+        self.selection_ranker = SelectRanker(base_model).to(device)
         self.loss_function = nn.NLLLoss().to(device)
         self.optimizer = optim.Adam(self.selection_ranker.parameters(), lr = 0.01)
         self.scheduler = get_linear_schedule_with_warmup(
@@ -62,6 +68,8 @@ class SelectRankerTrainer:
 
     def train(self):
         self.selection_ranker = self.selection_ranker.train()
+        for param in self.selection_ranker.base_model.parameters():
+            param.requires_grad = False
 
     def calc_loss(self, outputs, targets):
         pred_req_id = torch.argmax(outputs, dim = 1)

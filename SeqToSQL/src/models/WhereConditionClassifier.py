@@ -21,7 +21,7 @@ class WhereConditionClassifier(nn.Module):
         )
         output = self.drop(outputs.pooler_output)
         linear = self.linear(output)
-        softmax = torch.softmax(
+        softmax = torch.log_softmax(
             torch.sigmoid(linear), dim = 1
         )
         return softmax
