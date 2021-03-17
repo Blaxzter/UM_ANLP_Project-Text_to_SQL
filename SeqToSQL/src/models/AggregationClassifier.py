@@ -74,11 +74,12 @@ class AggregationClassifierTrainer:
 
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         agg_target = data["target"]['SELECT_AGG'].to(device)
+        select_target = data["target"]['SELECT'].to(device)
         agg_output = self.predict(
             input_ids,
             attention_mask,
             token_type_ids,
-            agg_target.view(-1)
+            select_target.view(-1)
         )
         self.calc_loss(
             agg_output, agg_target

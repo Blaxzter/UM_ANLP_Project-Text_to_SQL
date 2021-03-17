@@ -23,6 +23,10 @@ def train_epoch(models: Dict, data_loader, device, batch_size=16, report_size = 
     with tqdm(data_loader, unit="batch") as tepoch:
         for d in tepoch:
             sent_cnt += 1
+
+            if sent_cnt < 2422:
+                continue
+
             # Get sentence encoding
             input_ids = d["input_ids"].to(device)
             attention_mask = d["attention_mask"].to(device)
