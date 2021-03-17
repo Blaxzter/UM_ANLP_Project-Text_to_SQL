@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch import nn, optim
-from transformers import BertModel, get_linear_schedule_with_warmup
+from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup
 
 from utils.Constants import PRE_TRAINED_MODEL_NAME, NUM_AGGREGATIONS
 
@@ -9,9 +9,13 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME, NUM_AGGREGATIONS
 class AggregationClassifier(nn.Module):
     def __init__(self):
         super(AggregationClassifier, self).__init__()
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        self.bert = BertForSequenceClassification.from_pretrained(
+            PRE_TRAINED_MODEL_NAME,
+            num_labels = NUM_AGGREGATIONS,
+            output_attentions = False,
+            output_hidden_states = False,
+        )
         self.drop = nn.Dropout(p=0.3)
-        self.linear = nn.Linear(self.bert.config.hidden_size, NUM_AGGREGATIONS)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
 
@@ -20,12 +24,7 @@ class AggregationClassifier(nn.Module):
             attention_mask=attention_mask.unsqueeze(0),
             token_type_ids=token_type_ids.unsqueeze(0)
         )
-        output = self.drop(outputs.pooler_output)
-        linear = self.linear(output)
-        softmax = torch.softmax(
-            torch.sigmoid(linear), dim = 1
-        )
-        return softmax
+        return outputs
 
 
 class AggregationClassifierTrainer:
@@ -61,7 +60,7 @@ class AggregationClassifierTrainer:
             attention_mask = attention_mask.squeeze(0)[selected_column].view(-1),
             token_type_ids = token_type_ids.squeeze(0)[selected_column].view(-1),
         )
-        return outputs
+        return outputs['logits']
 
     def train(self):
         self.agg_classifier = self.agg_classifier.train()

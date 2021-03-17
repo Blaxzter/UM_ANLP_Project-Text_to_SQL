@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from torch import nn, optim
-from transformers import get_linear_schedule_with_warmup, BertModel
+from transformers import get_linear_schedule_with_warmup, BertModel, BertForQuestionAnswering
 
 from utils.Constants import PRE_TRAINED_MODEL_NAME
 
@@ -31,11 +31,25 @@ class QABert(nn.Module):
 
         return start_softmax, end_softmax
 
+class QABertPreTrained(nn.Module):
+
+    def __init__(self):
+        super(QABertPreTrained, self).__init__()
+        self.bert = BertForQuestionAnswering.from_pretrained(PRE_TRAINED_MODEL_NAME)
+
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.bert(
+            input_ids = input_ids.unsqueeze(0),
+            attention_mask = attention_mask.unsqueeze(0),
+            token_type_ids = token_type_ids.unsqueeze(0)
+        )
+
+        return outputs['start_logits'], outputs['end_logits']
 
 class QABertTrainer:
 
     def __init__(self, device, dataset):
-        self.qa_bert = QABert(1).to(device)
+        self.qa_bert = QABertPreTrained().to(device)
 
         self.loss_function1 = nn.NLLLoss().to(device)
         self.loss_function2 = nn.NLLLoss().to(device)
@@ -76,8 +90,8 @@ class QABertTrainer:
         self.qa_bert = self.qa_bert.train()
 
     def calc_loss(self, start_softmax, end_softmax, targets):
-        start_id = torch.argmax(start_softmax, dim = 1)
-        end_id = torch.argmax(end_softmax, dim = 1)
+        start_id = torch.argmax(start_softmax)
+        end_id = torch.argmax(end_softmax)
 
         self.correct_predictions += 1 if start_id == targets[0] and end_id == targets[1] else 0
 
