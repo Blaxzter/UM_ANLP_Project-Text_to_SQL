@@ -14,7 +14,7 @@ from models.WhereNumberClassifier import WhereNumberClassifierTrainer
 from models.WhereRanker import WhereRankerTrainer
 
 
-def train_epoch(models: Dict, data_loader, device, batch_size=16, report_size = 64):
+def train_epoch(models: Dict, data_loader, device, batch_size=16, report_size = 64, writer=None):
     # Set the models to train mode
     map(lambda x: x.train(), models)
 
@@ -23,6 +23,7 @@ def train_epoch(models: Dict, data_loader, device, batch_size=16, report_size = 
     with tqdm(data_loader, unit="it") as tepoch:
         for d in tepoch:
             sent_cnt += 1
+
             # Get sentence encoding
             input_ids = d["input_ids"].to(device)
             attention_mask = d["attention_mask"].to(device)

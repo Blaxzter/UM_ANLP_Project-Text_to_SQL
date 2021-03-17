@@ -58,6 +58,16 @@ class SelectRankerTrainer:
         )
         self.calc_loss(select_outputs, select_targets)
 
+    def parse_input(self, d):
+        input_ids = d["input_ids"]
+        attention_mask = d["attention_mask"]
+        token_type_ids = d["token_type_ids"]
+        return (
+            input_ids,
+            attention_mask,
+            token_type_ids
+        )
+
     def predict(self, input_ids, attention_mask, token_type_ids):
         outputs = self.selection_ranker(
             input_ids = input_ids,

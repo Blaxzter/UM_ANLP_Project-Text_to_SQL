@@ -47,7 +47,7 @@ class WhereConditionClassifierPreTrained(nn.Module):
             attention_mask = attention_mask.unsqueeze(0),
             token_type_ids = token_type_ids.unsqueeze(0)
         )
-        return outputs
+        return outputs['logits']
 
 
 class WhereConditionClassifierTrainer:
@@ -86,6 +86,19 @@ class WhereConditionClassifierTrainer:
 
             self.calc_loss(where_outputs, where_cond_target)
 
+    def parse_input(self, d):
+        input_ids = d["input_ids"]
+        attention_mask = d["attention_mask"]
+        token_type_ids = d["token_type_ids"]
+        where_columns = d["target"]['WHERE']
+        num_where_columns = torch.count_nonzero(where_columns).item()
+        target_idx = torch.topk(where_columns, k=num_where_columns, dim=1)[1]
+        return (
+            input_ids.squeeze(0)[target_idx[0]].view(-1),
+            attention_mask.squeeze(0)[target_idx[0]].view(-1),
+            token_type_ids.squeeze(0)[target_idx[0]].view(-1),
+        )
+
     def get_prediction(self, input_ids, attention_mask, token_type_ids, where_column):
         outputs = self.predict(
                 input_ids = input_ids,
@@ -101,10 +114,7 @@ class WhereConditionClassifierTrainer:
             attention_mask = attention_mask.squeeze(0)[where_column].view(-1),
             token_type_ids = token_type_ids.squeeze(0)[where_column].view(-1),
         )
-        if self.use_pretrained:
-            return outputs['logits']
-        else:
-            return outputs
+        return outputs
 
     def train(self):
         self.where_cond_classifier = self.where_cond_classifier.train()

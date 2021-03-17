@@ -49,7 +49,7 @@ class AggregationClassifierPreTrained(nn.Module):
             attention_mask=attention_mask.unsqueeze(0),
             token_type_ids=token_type_ids.unsqueeze(0)
         )
-        return outputs
+        return outputs['logits']
 
 
 class AggregationClassifierTrainer:
@@ -74,14 +74,26 @@ class AggregationClassifierTrainer:
 
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         agg_target = data["target"]['SELECT_AGG'].to(device)
+        select_target = data["target"]['SELECT'].to(device)
         agg_output = self.predict(
             input_ids,
             attention_mask,
             token_type_ids,
-            agg_target.view(-1)
+            select_target.view(-1)
         )
         self.calc_loss(
             agg_output, agg_target
+        )
+
+    def parse_input(self, d):
+        input_ids = d["input_ids"]
+        attention_mask = d["attention_mask"]
+        token_type_ids = d["token_type_ids"]
+        agg_target = d["target"]['SELECT_AGG']
+        return (
+            input_ids.squeeze(0)[agg_target.view(-1)].view(-1),
+            attention_mask.squeeze(0)[agg_target.view(-1)].view(-1),
+            token_type_ids.squeeze(0)[agg_target.view(-1)].view(-1),
         )
 
     def predict(self, input_ids, attention_mask, token_type_ids, selected_column):
@@ -90,10 +102,8 @@ class AggregationClassifierTrainer:
             attention_mask=attention_mask.squeeze(0)[selected_column].view(-1),
             token_type_ids=token_type_ids.squeeze(0)[selected_column].view(-1),
         )
-        if self.use_pretrained:
-            return outputs['logits']
-        else:
-            return outputs
+
+        return outputs
 
     def train(self):
         self.agg_classifier = self.agg_classifier.train()
