@@ -61,8 +61,11 @@ class QABertTrainer:
                 attention_mask = where_attention_mask.squeeze(0)[cond_num].view(-1),
                 token_type_ids = where_token_type_ids.squeeze(0)[cond_num].view(-1),
             )
-
-            self.calc_loss(start_softmax, end_softmax, where_cond_target)
+            
+            target_0 = where_cond_target[0].to(device)
+            target_1 = where_cond_target[1].to(device)
+            
+            self.calc_loss(start_softmax, end_softmax, target_0, target_1)
 
     def predict(self, input_ids, attention_mask, token_type_ids):
         start_softmax, end_softmax = self.qa_bert(
@@ -75,15 +78,15 @@ class QABertTrainer:
     def train(self):
         self.qa_bert = self.qa_bert.train()
 
-    def calc_loss(self, start_softmax, end_softmax, targets):
+    def calc_loss(self, start_softmax, end_softmax, target_0, target_1):
         start_id = torch.argmax(start_softmax, dim = 1)
         end_id = torch.argmax(end_softmax, dim = 1)
-
-        self.correct_predictions += 1 if start_id == targets[0] and end_id == targets[1] else 0
+        
+        self.correct_predictions += 1 if start_id == target_0 and end_id == target_1 else 0
 
         # todo utilising two losses doesnt work ._.
-        start_loss = self.loss_function1(start_softmax, targets[0].view((1, 1)))
-        end_loss = self.loss_function2(end_softmax, targets[1].view((1, 1)))
+        start_loss = self.loss_function1(start_softmax, target_0.view((1, 1)))
+        end_loss = self.loss_function2(end_softmax, target_1.view((1, 1)))
 
         self.start_losses.append(start_loss.item())
         self.end_losses.append(end_loss.item())
