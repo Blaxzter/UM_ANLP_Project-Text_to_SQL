@@ -25,7 +25,7 @@ class WhereRanker(nn.Module):
         )
         output = self.drop(outputs.pooler_output)
         linear = self.linear(output)
-        softmax = torch.log_softmax(
+        softmax = torch.softmax(
             torch.sigmoid(linear), dim = 0
         )
         return torch.transpose(softmax, 0, 1)
