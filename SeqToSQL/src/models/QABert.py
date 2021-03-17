@@ -9,12 +9,17 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME
 
 
 class QABert(nn.Module):
-    def __init__(self, output_num_words):
+    def __init__(self, base_model=None):
         super(QABert, self).__init__()
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+
+        if base_model is None:
+            self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        else:
+            self.bert = base_model
+
         self.drop = nn.Dropout(p = 0.3)
-        self.linearStart = nn.Linear(self.bert.config.hidden_size, output_num_words)
-        self.linearEnd = nn.Linear(self.bert.config.hidden_size, output_num_words)
+        self.linearStart = nn.Linear(self.bert.config.hidden_size, 1)
+        self.linearEnd = nn.Linear(self.bert.config.hidden_size, 1)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         outputs = self.bert(
@@ -23,10 +28,12 @@ class QABert(nn.Module):
             token_type_ids = token_type_ids.unsqueeze(0)
         )
         start_values = self.linearStart(outputs.last_hidden_state)
+        start_values = start_values.view(1, start_values.shape[1])
         # start_values_with_attention_mask = torch.mul(attention_mask, start_values.view(-1))
         start_softmax = torch.log_softmax(start_values, dim = 1)
 
         end_values = self.linearEnd(outputs.last_hidden_state)
+        end_values = end_values.view(1, end_values.shape[1])
         # end_values_with_attention_mask = torch.mul(attention_mask, end_values.view(-1))
         end_softmax = torch.log_softmax(end_values, dim = 1)
 
@@ -51,8 +58,12 @@ class QABertPreTrained(nn.Module):
 
 class QABertTrainer:
 
-    def __init__(self, device, dataset):
-        self.qa_bert = QABertPreTrained().to(device)
+    def __init__(self, device, dataset, base_model = None, use_pretrained=True):
+        self.use_pretrained = use_pretrained
+        if use_pretrained:
+            self.qa_bert = QABertPreTrained().to(device)
+        else:
+            self.qa_bert = QABert(base_model).to(device)
 
         self.loss_function1 = nn.NLLLoss().to(device)
         self.loss_function2 = nn.NLLLoss().to(device)

@@ -7,9 +7,12 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME, NUM_MAX_CONDITIONS
 
 
 class WhereNumberClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, base_model = None):
         super(WhereNumberClassifier, self).__init__()
-        self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        if base_model is None:
+            self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
+        else:
+            self.bert = base_model
         self.drop = nn.Dropout(p=0.3)
         self.linearPCIQ = nn.Linear(self.bert.config.hidden_size, 1)
         self.linearPNCIQ = nn.Linear(self.bert.config.hidden_size, NUM_MAX_CONDITIONS)
@@ -37,8 +40,8 @@ class WhereNumberClassifier(nn.Module):
 
 class WhereNumberClassifierTrainer:
 
-    def __init__(self, device, dataset):
-        self.where_numb_classifier = WhereNumberClassifier().to(device)
+    def __init__(self, device, dataset, base_model = None):
+        self.where_numb_classifier = WhereNumberClassifier(base_model).to(device)
         self.loss_function = nn.NLLLoss().to(device)
         self.optimizer = optim.Adam(self.where_numb_classifier.parameters(), lr = 0.01)
         self.scheduler = get_linear_schedule_with_warmup(
