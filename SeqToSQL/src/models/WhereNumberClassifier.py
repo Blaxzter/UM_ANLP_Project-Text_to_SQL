@@ -56,7 +56,6 @@ class WhereNumberClassifierTrainer:
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         # here we need only the length of the conditions
         where_numb_targets = data["target"]['WHERE_NUM_CONDITIONS'].to(device)
-
         where_outputs = self.predict(
             input_ids = input_ids,
             attention_mask = attention_mask,
@@ -100,6 +99,9 @@ class WhereNumberClassifierTrainer:
 
     def report_error(self, sent_cnt):
         print(f'Number of Where Conditions: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
+
+    def get_metric(self):
+        return "WNC", round(self.correct_predictions / len(self.losses),2), round(np.mean(self.losses),2)
 
     def get_model(self):
         return self.where_numb_classifier

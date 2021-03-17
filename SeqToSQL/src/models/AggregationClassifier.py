@@ -7,7 +7,7 @@ from utils.Constants import PRE_TRAINED_MODEL_NAME, NUM_AGGREGATIONS
 
 
 class AggregationClassifier(nn.Module):
-    def __init__(self, base_model = None):
+    def __init__(self, base_model=None):
         super(AggregationClassifier, self).__init__()
         if base_model is None:
             self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
@@ -26,7 +26,7 @@ class AggregationClassifier(nn.Module):
         output = self.drop(outputs.pooler_output)
         linear = self.linear(output)
         softmax = torch.log_softmax(
-            torch.sigmoid(linear), dim = 1
+            torch.sigmoid(linear), dim=1
         )
         return softmax
 
@@ -37,9 +37,9 @@ class AggregationClassifierPreTrained(nn.Module):
 
         self.bert = BertForSequenceClassification.from_pretrained(
             PRE_TRAINED_MODEL_NAME,
-            num_labels = NUM_AGGREGATIONS,
-            output_attentions = False,
-            output_hidden_states = False,
+            num_labels=NUM_AGGREGATIONS,
+            output_attentions=False,
+            output_hidden_states=False,
         )
         self.drop = nn.Dropout(p=0.3)
 
@@ -62,11 +62,11 @@ class AggregationClassifierTrainer:
             self.agg_classifier = AggregationClassifier(base_model).to(device)
 
         self.loss_function = nn.NLLLoss().to(device)
-        self.optimizer = optim.Adam(self.agg_classifier.parameters(), lr = 0.01)
+        self.optimizer = optim.Adam(self.agg_classifier.parameters(), lr=0.01)
         self.scheduler = get_linear_schedule_with_warmup(
             self.optimizer,
-            num_warmup_steps = 0,
-            num_training_steps = len(dataset)
+            num_warmup_steps=0,
+            num_training_steps=len(dataset)
         )
         self.num_examples = len(dataset)
         self.losses = []
@@ -86,35 +86,38 @@ class AggregationClassifierTrainer:
 
     def predict(self, input_ids, attention_mask, token_type_ids, selected_column):
         outputs = self.agg_classifier(
-            input_ids = input_ids.squeeze(0)[selected_column].view(-1),
-            attention_mask = attention_mask.squeeze(0)[selected_column].view(-1),
-            token_type_ids = token_type_ids.squeeze(0)[selected_column].view(-1),
+            input_ids=input_ids.squeeze(0)[selected_column].view(-1),
+            attention_mask=attention_mask.squeeze(0)[selected_column].view(-1),
+            token_type_ids=token_type_ids.squeeze(0)[selected_column].view(-1),
         )
         if self.use_pretrained:
             return outputs['logits']
         else:
             return outputs
 
-
     def train(self):
         self.agg_classifier = self.agg_classifier.train()
 
     def calc_loss(self, outputs, targets):
-        pred_req_id = torch.argmax(outputs, dim = 1)
+        pred_req_id = torch.argmax(outputs, dim=1)
         self.correct_predictions += 1 if pred_req_id == targets else 0
         loss = self.loss_function(outputs, targets.view(-1))
         self.losses.append(loss.item())
-
+        self.losses.append(loss.item())
         loss.backward()
 
     def step(self):
-        nn.utils.clip_grad_norm_(self.agg_classifier.parameters(), max_norm = 1.0)
+        nn.utils.clip_grad_norm_(self.agg_classifier.parameters(), max_norm=1.0)
         self.optimizer.step()
         self.scheduler.step()
         self.optimizer.zero_grad()
 
     def report_error(self, sent_cnt):
-        print(f'Aggregation Ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
+        print(
+            f'Aggregation Ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
+
+    def get_metric(self):
+        return "SAC", round(self.correct_predictions / len(self.losses), 2), round(np.mean(self.losses), 2)
 
     def get_model(self):
         return self.agg_classifier

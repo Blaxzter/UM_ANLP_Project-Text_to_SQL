@@ -88,5 +88,8 @@ class SelectRankerTrainer:
     def report_error(self, sent_cnt):
         print(f'Select ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
 
+    def get_metric(self):
+        return "SRank", round(self.correct_predictions / len(self.losses), 2), round(np.mean(self.losses), 2)
+
     def get_model(self):
         return self.selection_ranker

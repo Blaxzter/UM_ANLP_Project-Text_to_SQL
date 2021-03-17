@@ -126,5 +126,8 @@ class WhereConditionClassifierTrainer:
     def report_error(self, sent_cnt):
         print(f'Where condition Ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
 
+    def get_metric(self):
+        return "WCC", round(self.correct_predictions / len(self.losses), 2), round(np.mean(self.losses), 2)
+
     def get_model(self):
         return self.where_cond_classifier

@@ -73,7 +73,7 @@ class WhereRankerTrainer:
 
         self.correct_predictions += 1 if torch.all(top_where_selection == target_idx) else 0
         loss = self.loss_function(outputs, targets)
-
+        self.losses.append(loss.item())
         loss.backward()
 
     def step(self):
@@ -84,6 +84,9 @@ class WhereRankerTrainer:
 
     def report_error(self, sent_cnt):
         print(f'Where ranker: Correct predictions: {self.correct_predictions / sent_cnt}, mean loss: {np.mean(self.losses)}')
+
+    def get_metric(self):
+        return "WRank", round(self.correct_predictions / len(self.losses), 2), round(np.mean(self.losses), 2)
 
     def get_model(self):
         return self.where_ranker
