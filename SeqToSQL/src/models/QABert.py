@@ -17,7 +17,7 @@ class QABert(nn.Module):
         else:
             self.bert = base_model
 
-        self.drop = nn.Dropout(p=0.3)
+        self.drop = nn.Dropout(p=0.1)
         self.linearStart = nn.Linear(self.bert.config.hidden_size, 1)
         self.linearEnd = nn.Linear(self.bert.config.hidden_size, 1)
 

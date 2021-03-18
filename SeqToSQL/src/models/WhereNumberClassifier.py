@@ -13,7 +13,7 @@ class WhereNumberClassifier(nn.Module):
             self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
         else:
             self.bert = base_model
-        self.drop = nn.Dropout(p=0.3)
+        self.drop = nn.Dropout(p=0.1)
         self.linearPCIQ = nn.Linear(self.bert.config.hidden_size, 1)
         self.linearPNCIQ = nn.Linear(self.bert.config.hidden_size, NUM_MAX_CONDITIONS)
 

@@ -16,7 +16,7 @@ class SelectRanker(nn.Module):
         else:
             self.bert = base_model
 
-        #self.drop = nn.Dropout(p=0.1)
+        self.drop = nn.Dropout(p=0.1)
         self.linear = nn.Linear(self.bert.config.hidden_size, 1)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
@@ -26,8 +26,8 @@ class SelectRanker(nn.Module):
             attention_mask=attention_mask.squeeze(0),
             token_type_ids=token_type_ids.squeeze(0)
         )
-        #output = self.drop(outputs.pooler_output)
-        linear = self.linear(outputs.pooler_output)
+        output = self.drop(outputs.pooler_output)
+        linear = self.linear(output)
         #softmax = torch.log_softmax(
         #    torch.sigmoid(linear), dim = 0
         #)
@@ -83,7 +83,7 @@ class SelectRankerTrainer:
 
     def train(self):
         self.selection_ranker = self.selection_ranker.train()
-        for param in self.selection_ranker.base_model.parameters():
+        for param in self.selection_ranker.bert.parameters():
             param.requires_grad = False
 
     def calc_loss(self, outputs, targets):

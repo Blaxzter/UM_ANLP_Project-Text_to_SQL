@@ -13,7 +13,7 @@ class AggregationClassifier(nn.Module):
             self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
         else:
             self.bert = base_model
-        self.drop = nn.Dropout(p=0.3)
+        self.drop = nn.Dropout(p=0.1)
         self.linear = nn.Linear(self.bert.config.hidden_size, NUM_AGGREGATIONS)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
@@ -26,7 +26,7 @@ class AggregationClassifier(nn.Module):
         output = self.drop(outputs.pooler_output)
         linear = self.linear(output)
         softmax = torch.log_softmax(
-            torch.sigmoid(linear), dim=1
+            linear, dim=1
         )
         return softmax
 

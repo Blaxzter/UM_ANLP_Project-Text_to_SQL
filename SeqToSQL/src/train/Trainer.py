@@ -16,9 +16,10 @@ from models.WhereNumberClassifier import WhereNumberClassifierTrainer
 from models.WhereRanker import WhereRankerTrainer
 
 
-def train_epoch(models: Dict, data_loader, device, batch_size = 16, report_size = 64, writer = None):
+def train_epoch(models: Dict, data_loader, device, batch_size = 16, report_size = 8, writer = None):
     # Set the models to train mode
-    map(lambda x: x.train(), models)
+    for model in models.values():
+        model.train()
 
     sent_cnt = 0
 
@@ -32,14 +33,22 @@ def train_epoch(models: Dict, data_loader, device, batch_size = 16, report_size 
             token_type_ids = d["token_type_ids"].to(device)
 
             metrics = ""
-            for model_key in models:
-                models[model_key].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
+            for model in models.values():
+                model.train_model_step(d, device, input_ids, attention_mask, token_type_ids)
                 if (sent_cnt % batch_size) == 0 or sent_cnt == len(data_loader) - 1:
-                    models[model_key].step()
-                    id, acc, loss = models[model_key].get_metric()
+                    model.step()
+                    id, acc, loss = model.get_metric()
                     metrics = metrics + f' {id}[Acc: {acc}, Loss: {loss}], '
 
                     tepoch.set_postfix_str(metrics)
+
+            if (sent_cnt % report_size) == 0 or sent_cnt == len(data_loader) - 1:
+
+                for model in models.values():
+                    id, acc, loss = model.get_metric()
+                    writer.add_scalar(f'Accuracy/{id}', acc, sent_cnt)
+                    writer.add_scalar(f'Loss/{id}', loss, sent_cnt)
+
             # models["where_numb_class_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
 
             # models["selection_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
@@ -103,6 +112,7 @@ def get_request(models, table_name, columns, types, question, tokenizer):
     aggregation = agg_class_trainer.get_prediction(_input_ids, _attention_mask, _token_type_ids, selected_column)
 
     where_numb_class_trainer: WhereNumberClassifierTrainer = models['where_numb_class_trainer']
+
     where_ranker_trainer: WhereRankerTrainer = models['where_ranker_trainer']
     where_cond_class_trainer: WhereConditionClassifierTrainer = models['where_cond_class_trainer']
     qa_trainer: QABertTrainer = models['qa_trainer']
@@ -143,8 +153,11 @@ def get_request(models, table_name, columns, types, question, tokenizer):
     cond_dict = ['=', '>', '<', 'OP']
 
     produced_where_cond = "" if len(where_conditions) == 0 else "WHERE "
-    for c_w_c in where_conditions:
-        produced_where_cond += f'{c_w_c["column_name"]} {cond_dict[c_w_c["agg"]]} {c_w_c["value"]} '
+    for i, c_w_c in enumerate(where_conditions):
+        produced_where_cond += f'{c_w_c["column_name"]} {cond_dict[c_w_c["agg"]]} {c_w_c["value"]}'
+        if i < len(where_conditions):
+            produced_where_cond += 'AND'
+
 
     return f'SELECT {agg_ops[aggregation]} {columns[selected_column]}\n' \
            f'FROM {table_name}\n' \

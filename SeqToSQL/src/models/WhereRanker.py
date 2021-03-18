@@ -25,12 +25,13 @@ class WhereRanker(nn.Module):
             token_type_ids=token_type_ids.squeeze(0)
         )
         output = self.drop(outputs.pooler_output)
-        linear = self.linear(outputs.pooler_output)
-        #softmax = torch.log_softmax(
-        #    torch.sigmoid(linear), dim = 0
-        #)
-        softmax = torch.log_softmax(linear, dim=0)
-        return torch.transpose(softmax, 0, 1)
+        linear = self.linear(output)
+        # #softmax = torch.log_softmax(
+        # #    torch.sigmoid(linear), dim = 0
+        # #)
+        # softmax = torch.log_softmax(linear, dim=0)
+        sigmoid = torch.sigmoid(linear)
+        return torch.transpose(sigmoid, 0, 1)
 
 
 class WhereRankerTrainer:
@@ -47,6 +48,32 @@ class WhereRankerTrainer:
         self.num_examples = len(dataset)
         self.losses = []
         self.correct_predictions = 0
+
+    def parse_input(self, d):
+        input_ids = d["input_ids"]
+        attention_mask = d["attention_mask"]
+        token_type_ids = d["token_type_ids"]
+        return (
+            input_ids,
+            attention_mask,
+            token_type_ids
+        )
+
+    def predict(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.where_ranker(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            token_type_ids = token_type_ids
+        )
+        return outputs
+
+    def get_prediction(self, input_ids, attention_mask, token_type_ids, num_where_column):
+        outputs = self.predict(input_ids, attention_mask, token_type_ids)
+        top_where_selection = torch.topk(outputs, k = num_where_column, dim = 1)[1]
+        return top_where_selection
+
+    def train(self):
+        self.where_ranker = self.where_ranker.train()
 
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         where_targets = data["target"]['WHERE'].to(device)
@@ -92,7 +119,6 @@ class WhereRankerTrainer:
         loss = self.loss_function(outputs, targets)
         self.losses.append(loss.item())
         loss.backward()
-
 
     def step(self):
         nn.utils.clip_grad_norm_(self.where_ranker.parameters(), max_norm = 1.0)
