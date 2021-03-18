@@ -48,7 +48,7 @@ def train_epoch(models: Dict, train_data_loader, eval_data_loader, device, batch
 
             if ((generation % report_size) == 0 or generation == len(train_data_loader) - 1) and writer is not None:
 
-                for model in models.values():
+                for model_name, model in models.items():
                     id, acc, loss = model.get_metric()
                     writer.add_scalar(f'Train_Accuracy/{model_name}', acc, generation)
                     writer.add_scalar(f'Train_Loss/{model_name}', loss, generation)

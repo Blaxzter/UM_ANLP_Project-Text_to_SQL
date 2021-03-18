@@ -83,6 +83,10 @@ class QABertTrainer:
         where_input_ids = data["qa_input_ids"].to(device)
         where_attention_mask = data["qa_attention_mask"].to(device)
         where_token_type_ids = data["qa_token_type_ids"].to(device)
+
+        c_losses = []
+        c_correct_predictions = []
+
         for cond_num, where_cond_target in enumerate(data["target"]['WHERE_VALUE']):
             target_0 = where_cond_target[0].to(device)
             target_1 = where_cond_target[1].to(device)
@@ -93,7 +97,11 @@ class QABertTrainer:
                 token_type_ids=where_token_type_ids.squeeze(0)[cond_num].view(-1)
             )
 
-            return self.calc_loss(start_softmax, end_softmax, target_0, target_1)
+            loss, correct_prediction = self.calc_loss(start_softmax, end_softmax, target_0, target_1)
+            c_losses.append(loss)
+            c_correct_predictions.append(correct_prediction)
+
+        return np.mean(c_losses), np.mean(c_correct_predictions)
 
     def parse_input(self, d):
         input_ids = d["qa_input_ids"]
