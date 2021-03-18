@@ -71,6 +71,7 @@ class AggregationClassifierTrainer:
         self.num_examples = len(dataset)
         self.losses = []
         self.correct_predictions = 0
+        self.train_mode = True
 
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         agg_target = data["target"]['SELECT_AGG'].to(device)
@@ -81,7 +82,7 @@ class AggregationClassifierTrainer:
             token_type_ids,
             select_target.view(-1)
         )
-        self.calc_loss(
+        return self.calc_loss(
             agg_output, agg_target
         )
 
@@ -109,16 +110,28 @@ class AggregationClassifierTrainer:
         outputs = self.predict(input_ids, attention_mask, token_type_ids, selected_column)
         return torch.argmax(outputs, dim=1)
 
+    def eval(self):
+        self.train_mode = False
+        self.agg_classifier.eval()
+
     def train(self):
-        self.agg_classifier = self.agg_classifier.train()
+        self.train_mode = True
+        self.agg_classifier.train()
 
     def calc_loss(self, outputs, targets):
         pred_req_id = torch.argmax(outputs, dim=1)
-        self.correct_predictions += 1 if pred_req_id == targets else 0
+
+        correct_prediction = 1 if pred_req_id == targets else 0
+        if self.train_mode:
+            self.correct_predictions += correct_prediction
+
         loss = self.loss_function(outputs, targets.view(-1))
-        self.losses.append(loss.item())
-        self.losses.append(loss.item())
-        loss.backward()
+
+        if self.train_mode:
+            self.losses.append(loss.item())
+            loss.backward()
+
+        return loss.item(), correct_prediction
 
     def step(self):
         nn.utils.clip_grad_norm_(self.agg_classifier.parameters(), max_norm=1.0)

@@ -2,8 +2,9 @@ import os
 from datetime import datetime
 from typing import Dict
 
+import numpy as np
 import torch
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 
 from dataLoader.DataLoaderUtils import get_question_answers_def_length, get_question_answers, get_qa_embeddings
 from utils.Constants import save_folder
@@ -16,16 +17,16 @@ from models.WhereNumberClassifier import WhereNumberClassifierTrainer
 from models.WhereRanker import WhereRankerTrainer
 
 
-def train_epoch(models: Dict, data_loader, device, batch_size = 16, report_size = 8, writer = None):
+def train_epoch(models: Dict, train_data_loader, eval_data_loader, device, batch_size = 16, report_size = 8, eval_size = 64, writer = None):
     # Set the models to train mode
     for model in models.values():
         model.train()
 
-    sent_cnt = 0
+    generation = 0
 
-    with tqdm(data_loader, unit = "it") as tepoch:
+    with tqdm(train_data_loader, desc = "Train", unit = "it") as tepoch:
         for d in tepoch:
-            sent_cnt += 1
+            generation += 1
 
             # Get sentence encoding
             input_ids = d["input_ids"].to(device)
@@ -33,36 +34,71 @@ def train_epoch(models: Dict, data_loader, device, batch_size = 16, report_size 
             token_type_ids = d["token_type_ids"].to(device)
 
             metrics = ""
-            for model in models.values():
+            for model_name, model in models.items():
                 model.train_model_step(d, device, input_ids, attention_mask, token_type_ids)
-                if (sent_cnt % batch_size) == 0 or sent_cnt == len(data_loader) - 1:
+                if (generation % batch_size) == 0 or generation == len(train_data_loader) - 1:
                     model.step()
                     id, acc, loss = model.get_metric()
                     metrics = metrics + f' {id}[Acc: {acc}, Loss: {loss}], '
 
-                    tepoch.set_postfix_str(metrics)
 
-            if (sent_cnt % report_size) == 0 or sent_cnt == len(data_loader) - 1:
+                    # tepoch.set_postfix_str(metrics)
+            # if (generation % batch_size) == 0 or generation == len(train_data_loader) - 1:
+            #     print(metrics)
+
+            if ((generation % report_size) == 0 or generation == len(train_data_loader) - 1) and writer is not None:
 
                 for model in models.values():
                     id, acc, loss = model.get_metric()
-                    writer.add_scalar(f'Accuracy/{id}', acc, sent_cnt)
-                    writer.add_scalar(f'Loss/{id}', loss, sent_cnt)
+                    writer.add_scalar(f'Train_Accuracy/{model_name}', acc, generation)
+                    writer.add_scalar(f'Train_Loss/{model_name}', loss, generation)
 
-            # models["where_numb_class_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
+            if (generation % eval_size) == 0 or generation == len(train_data_loader) - 1:
 
-            # models["selection_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
-            # models["agg_class_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
+                eval_model(
+                    models = models,
+                    eval_data_loader = eval_data_loader,
+                    generation = generation,
+                    device = device,
+                    writer = writer
+                )
 
-            # models["where_ranker_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
-            # models["where_cond_class_trainer"].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
-            # models['qa_trainer'].train_model_step(d, device, input_ids, attention_mask, token_type_ids)
 
-            # if (sent_cnt % batch_size) == 0 or sent_cnt == len(data_loader) - 1:
-            #    map(lambda x: x.step(), models)
+def eval_model(models: Dict, eval_data_loader, generation, device, writer = None):
+    with torch.no_grad():
 
-            # if (sent_cnt % report_size) == 0 or sent_cnt == len(data_loader) - 1:
-            #    map(lambda x: x.report_error(), models)
+        for model in models.values():
+            model.eval()
+
+        eval_data = np.random.choice(list(eval_data_loader), 8)
+
+        loss_datas = {
+            model_name: [] for model_name in models.keys()
+        }
+
+        acc_datas = {
+            model_name: [] for model_name in models.keys()
+        }
+
+        with tqdm(eval_data, desc = "Eval", unit = "it", leave=False) as eval_tepoch:
+            for d in eval_tepoch:
+                # Get sentence encoding
+                input_ids = d["input_ids"].to(device)
+                attention_mask = d["attention_mask"].to(device)
+                token_type_ids = d["token_type_ids"].to(device)
+
+                for key, model in models.items():
+                    loss, acc = model.train_model_step(d, device, input_ids, attention_mask, token_type_ids)
+                    loss_datas[key].append(loss)
+                    acc_datas[key].append(acc)
+
+    for key, model in models.items():
+        if writer is not None:
+            loss = np.mean(loss_datas[key])
+            acc = np.mean(acc_datas[key])
+            writer.add_scalar(f'Eval_Accuracy/{key}', acc, generation)
+            writer.add_scalar(f'Eval_Loss/{key}', loss, generation)
+        model.train()
 
 
 def save_model(models: Dict, path):

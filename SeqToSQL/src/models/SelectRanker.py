@@ -50,6 +50,8 @@ class SelectRankerTrainer:
         self.losses = []
         self.correct_predictions = 0
 
+        self.train_mode = True
+
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         select_targets = data["target"]['SELECT'].to(device)
         select_outputs = self.predict(
@@ -57,7 +59,7 @@ class SelectRankerTrainer:
             attention_mask = attention_mask,
             token_type_ids = token_type_ids
         )
-        self.calc_loss(select_outputs, select_targets)
+        return self.calc_loss(select_outputs, select_targets)
 
     def parse_input(self, d):
         input_ids = d["input_ids"]
@@ -81,18 +83,27 @@ class SelectRankerTrainer:
         outputs = self.predict(input_ids, attention_mask, token_type_ids)
         return torch.argmax(outputs, dim = 1)
 
+    def eval(self):
+        self.train_mode = False
+        self.selection_ranker = self.selection_ranker.eval()
+
     def train(self):
+        self.train_mode = True
         self.selection_ranker = self.selection_ranker.train()
-        for param in self.selection_ranker.bert.parameters():
-            param.requires_grad = False
 
     def calc_loss(self, outputs, targets):
         pred_req_id = torch.argmax(outputs, dim = 1)
-        self.correct_predictions += 1 if pred_req_id == targets else 0
-        loss = self.loss_function(outputs, targets.view(-1))
-        self.losses.append(loss.item())
+        correct_prediction = 1 if pred_req_id == targets else 0
 
-        loss.backward()
+        if self.train_mode:
+            self.correct_predictions += correct_prediction
+        loss = self.loss_function(outputs, targets.view(-1))
+
+        if self.train_mode:
+            self.losses.append(loss.item())
+            loss.backward()
+
+        return loss.item(), correct_prediction
 
     def step(self):
         nn.utils.clip_grad_norm_(self.selection_ranker.parameters(), max_norm = 1.0)

@@ -48,6 +48,7 @@ class WhereRankerTrainer:
         self.num_examples = len(dataset)
         self.losses = []
         self.correct_predictions = 0
+        self.train_mode = True
 
     def parse_input(self, d):
         input_ids = d["input_ids"]
@@ -72,7 +73,12 @@ class WhereRankerTrainer:
         top_where_selection = torch.topk(outputs, k = num_where_column, dim = 1)[1]
         return top_where_selection
 
+    def eval(self):
+        self.train_mode = False
+        self.where_ranker = self.where_ranker.eval()
+
     def train(self):
+        self.train_mode = True
         self.where_ranker = self.where_ranker.train()
 
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
@@ -82,43 +88,23 @@ class WhereRankerTrainer:
             attention_mask = attention_mask,
             token_type_ids = token_type_ids
         )
-        self.calc_loss(where_outputs, where_targets)
-
-    def parse_input(self, d):
-        input_ids = d["input_ids"]
-        attention_mask = d["attention_mask"]
-        token_type_ids = d["token_type_ids"]
-        return (
-            input_ids,
-            attention_mask,
-            token_type_ids
-        )
-
-    def predict(self, input_ids, attention_mask, token_type_ids):
-        outputs = self.where_ranker(
-            input_ids = input_ids,
-            attention_mask = attention_mask,
-            token_type_ids = token_type_ids
-        )
-        return outputs
-
-    def get_prediction(self, input_ids, attention_mask, token_type_ids, num_where_column):
-        outputs = self.predict(input_ids, attention_mask, token_type_ids)
-        top_where_selection = torch.topk(outputs, k = num_where_column, dim = 1)[1]
-        return top_where_selection
-
-    def train(self):
-        self.where_ranker = self.where_ranker.train()
+        return self.calc_loss(where_outputs, where_targets)
 
     def calc_loss(self, outputs, targets):
         num_where_columns = torch.count_nonzero(targets).item()
         target_idx = torch.topk(targets, k=num_where_columns, dim=1)[1]
         top_where_selection = torch.topk(outputs, k=num_where_columns, dim=1)[1]
 
-        self.correct_predictions += 1 if torch.all(top_where_selection == target_idx) else 0
+        correct_prediction = 1 if torch.all(top_where_selection == target_idx) else 0
+        if self.train_mode:
+            self.correct_predictions += correct_prediction
         loss = self.loss_function(outputs, targets)
-        self.losses.append(loss.item())
-        loss.backward()
+
+        if self.train_mode:
+            self.losses.append(loss.item())
+            loss.backward()
+
+        return loss.item(), correct_prediction
 
     def step(self):
         nn.utils.clip_grad_norm_(self.where_ranker.parameters(), max_norm = 1.0)

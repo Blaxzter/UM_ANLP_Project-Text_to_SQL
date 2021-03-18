@@ -77,6 +77,7 @@ class QABertTrainer:
         self.num_examples = len(dataset)
         self.losses = []
         self.correct_predictions = 0
+        self.train_mode = True
 
     def train_model_step(self, data, device, input_ids, attention_mask, token_type_ids):
         where_input_ids = data["qa_input_ids"].to(device)
@@ -92,7 +93,7 @@ class QABertTrainer:
                 token_type_ids=where_token_type_ids.squeeze(0)[cond_num].view(-1)
             )
 
-            self.calc_loss(start_softmax, end_softmax, target_0, target_1)
+            return self.calc_loss(start_softmax, end_softmax, target_0, target_1)
 
     def parse_input(self, d):
         input_ids = d["qa_input_ids"]
@@ -118,14 +119,21 @@ class QABertTrainer:
         end_id = torch.argmax(end_logits)
         return start_id, end_id
 
+    def eval(self):
+        self.train_mode = False
+        self.qa_bert.eval()
+
     def train(self):
-        self.qa_bert = self.qa_bert.train()
+        self.train_mode = True
+        self.qa_bert.train()
 
     def calc_loss(self, start_logits, end_logits, start_positions, end_positions):
         start_id = torch.argmax(start_logits)
         end_id = torch.argmax(end_logits)
 
-        self.correct_predictions += 1 if start_id == start_positions and end_id == end_positions else 0
+        correct_prediction = 1 if start_id == start_positions and end_id == end_positions else 0
+        if self.train_mode:
+            self.correct_predictions += correct_prediction
 
         # sometimes the start/end positions are outside our model inputs, we ignore these terms
         ignored_index = start_logits.size(1)
@@ -137,9 +145,11 @@ class QABertTrainer:
         end_loss = loss_fct(end_logits, end_positions)
         total_loss = (start_loss + end_loss) / 2
 
-        self.losses.append(total_loss.item())
+        if self.train_mode:
+            self.losses.append(total_loss.item())
+            total_loss.backward()
 
-        total_loss.backward()
+        return total_loss.item(), correct_prediction
 
     def step(self):
         nn.utils.clip_grad_norm_(self.qa_bert.parameters(), max_norm=1.0)

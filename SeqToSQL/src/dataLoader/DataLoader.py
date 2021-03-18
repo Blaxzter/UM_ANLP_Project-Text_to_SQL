@@ -74,7 +74,7 @@ class WikiSQLDataset(Dataset):
 
 
 def get_data_loader(data_type, tokenizer, batch_size, filter_data = True, pad_length = 65):
-    # TODO check if we can use dataLoader with batch size as done in the tutorial
+
     loaded_req = read_json_data_from_file(f'{data_folder}/{data_type}.jsonl')
     loaded_tables = read_json_data_from_file(f'{data_folder}/{data_type}.tables.jsonl')
     table_data_dict = convert_to_id_dict(loaded_tables, 'id')
