@@ -13,8 +13,9 @@ class WhereRanker(nn.Module):
             self.bert = BertModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
         else:
             self.bert = base_model
-        self.drop = nn.Dropout(p=0.3)
+        self.drop = nn.Dropout(p=0.1)
         self.linear = nn.Linear(self.bert.config.hidden_size, 1)
+
 
     def forward(self, input_ids, attention_mask, token_type_ids):
 
@@ -24,10 +25,11 @@ class WhereRanker(nn.Module):
             token_type_ids=token_type_ids.squeeze(0)
         )
         output = self.drop(outputs.pooler_output)
-        linear = self.linear(output)
-        softmax = torch.softmax(
-            torch.sigmoid(linear), dim = 0
-        )
+        linear = self.linear(outputs.pooler_output)
+        #softmax = torch.log_softmax(
+        #    torch.sigmoid(linear), dim = 0
+        #)
+        softmax = torch.log_softmax(linear, dim=0)
         return torch.transpose(softmax, 0, 1)
 
 
@@ -90,6 +92,7 @@ class WhereRankerTrainer:
         loss = self.loss_function(outputs, targets)
         self.losses.append(loss.item())
         loss.backward()
+
 
     def step(self):
         nn.utils.clip_grad_norm_(self.where_ranker.parameters(), max_norm = 1.0)
