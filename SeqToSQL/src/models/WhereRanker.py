@@ -73,6 +73,11 @@ class WhereRankerTrainer:
         )
         return outputs
 
+    def get_prediction(self, input_ids, attention_mask, token_type_ids, num_where_column):
+        outputs = self.predict(input_ids, attention_mask, token_type_ids)
+        top_where_selection = torch.topk(outputs, k = num_where_column, dim = 1)[1]
+        return top_where_selection
+
     def train(self):
         self.where_ranker = self.where_ranker.train()
 

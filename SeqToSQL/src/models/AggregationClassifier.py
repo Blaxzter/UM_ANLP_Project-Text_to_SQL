@@ -105,6 +105,10 @@ class AggregationClassifierTrainer:
 
         return outputs
 
+    def get_prediction(self, input_ids, attention_mask, token_type_ids, selected_column):
+        outputs = self.predict(input_ids, attention_mask, token_type_ids, selected_column)
+        return torch.argmax(outputs, dim=1)
+
     def train(self):
         self.agg_classifier = self.agg_classifier.train()
 

@@ -76,6 +76,10 @@ class SelectRankerTrainer:
         )
         return outputs
 
+    def get_prediction(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.predict(input_ids, attention_mask, token_type_ids)
+        return torch.argmax(outputs, dim = 1)
+
     def train(self):
         self.selection_ranker = self.selection_ranker.train()
         for param in self.selection_ranker.base_model.parameters():

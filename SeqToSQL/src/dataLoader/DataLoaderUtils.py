@@ -107,3 +107,18 @@ def get_question_answers_for_where_value_def_length(request, tokenizer, pad_max_
         target_list.append([startIdx, endIdx])
 
     return input_list, target_list, len(conditions)
+
+
+def get_qa_embeddings(tokenizer, question, column_name, opp_id):
+    cond_dict = {0: "equal to ", 1: "less than ", 2: "more than ", 3: "OP "}
+    opp_name = cond_dict[opp_id]
+    return tokenizer.encode_plus(
+            text = column_name + ' ' + opp_name,
+            text_pair = question,
+            add_special_tokens = True,
+            max_length = 65,
+            padding = 'max_length',
+            truncation = True,
+            return_overflowing_tokens = True,
+            return_attention_mask = True,
+        )

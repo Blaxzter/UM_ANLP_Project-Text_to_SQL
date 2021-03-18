@@ -112,6 +112,12 @@ class QABertTrainer:
         )
         return start_softmax, end_softmax
 
+    def get_prediction(self, input_ids, attention_mask, token_type_ids):
+        start_logits, end_logits = self.predict(input_ids, attention_mask, token_type_ids)
+        start_id = torch.argmax(start_logits)
+        end_id = torch.argmax(end_logits)
+        return start_id, end_id
+
     def train(self):
         self.qa_bert = self.qa_bert.train()
 
