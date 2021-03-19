@@ -72,6 +72,17 @@ class WikiSQLDataset(Dataset):
     def __getitem__(self, item):
         return self.req_prepared[item]
 
+def get_input_data(data_type, tokenizer, batch_size, filter_data = True, pad_length = 65, idx=0):
+    loaded_req = read_json_data_from_file(f'{data_folder}/{data_type}.jsonl')
+    loaded_tables = read_json_data_from_file(f'{data_folder}/{data_type}.tables.jsonl')
+    table_data_dict = convert_to_id_dict(loaded_tables, 'id')
+
+    prep_req_data = get_table_column(loaded_req, table_data_dict)
+    table_name = prep_req_data[idx]['table_name']
+    columns = prep_req_data[idx]['columns']
+    types = prep_req_data[idx]['types']
+    question = prep_req_data[idx]['question']
+    return table_name, columns, types, question
 
 def get_data_loader(data_type, tokenizer, batch_size, filter_data = True, pad_length = 65):
 

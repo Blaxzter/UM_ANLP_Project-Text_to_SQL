@@ -81,7 +81,8 @@ class WhereNumberClassifierTrainer:
                 attention_mask = attention_mask,
                 token_type_ids = token_type_ids,
             )
-        return torch.argmax(outputs, dim = 1)
+
+        return torch.argmax(outputs, dim = 0)
 
     def predict(self, input_ids, attention_mask, token_type_ids):
         outputs = self.where_numb_classifier(
