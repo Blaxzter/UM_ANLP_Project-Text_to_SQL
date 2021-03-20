@@ -154,14 +154,14 @@ def save_model(models: Dict, path):
         torch.save(model.state_dict(), final_path)
 
 
-def load_model(path, dev_data_loader, device):
+def load_model(path, data_loader, device, bert):
     models = dict(
-        selection_trainer = SelectRankerTrainer(device, dev_data_loader),
-        agg_class_trainer = AggregationClassifierTrainer(device, dev_data_loader),
-        where_ranker_trainer = WhereRankerTrainer(device, dev_data_loader),
-        where_cond_class_trainer = WhereConditionClassifierTrainer(device, dev_data_loader),
-        where_numb_class_trainer = WhereNumberClassifierTrainer(device, dev_data_loader),
-        qa_trainer = QABertTrainer(device, dev_data_loader),
+        selection_trainer = SelectRankerTrainer(device, data_loader, bert),
+        agg_class_trainer = AggregationClassifierTrainer(device, data_loader, bert, use_pretrained=False),
+        where_ranker_trainer = WhereRankerTrainer(device, data_loader, bert),
+        where_cond_class_trainer = WhereConditionClassifierTrainer(device, data_loader, bert, use_pretrained=False),
+        where_numb_class_trainer = WhereNumberClassifierTrainer(device, data_loader, bert),
+        qa_trainer = QABertTrainer(device, data_loader, bert, use_pretrained=False),
     )
     for name in models:
         models[name].get_model().load_state_dict(torch.load(path + "/" + name + ".ckpt"))
