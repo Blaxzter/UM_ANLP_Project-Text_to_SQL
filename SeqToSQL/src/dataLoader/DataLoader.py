@@ -84,7 +84,7 @@ def get_input_data(data_type, tokenizer, batch_size, filter_data = True, pad_len
     question = prep_req_data[idx]['question']
     return table_name, columns, types, question
 
-def get_data_loader(data_type, tokenizer, batch_size, filter_data = True, pad_length = 65):
+def get_data_loader(data_type, tokenizer, batch_size, filter_data = True, pad_length = 65, max_size=None):
 
     loaded_req = read_json_data_from_file(f'{data_folder}/{data_type}.jsonl')
     loaded_tables = read_json_data_from_file(f'{data_folder}/{data_type}.tables.jsonl')
@@ -96,8 +96,13 @@ def get_data_loader(data_type, tokenizer, batch_size, filter_data = True, pad_le
     #     prep_req_data = list(filter(lambda request: len(request['columns']) == 5, prep_req_data))
 
     print(f'We have {len(loaded_req)} {data_type} data with {len(loaded_tables)} tables.')
-
-    return DataLoader(
-        WikiSQLDataset(requests = prep_req_data, tokenizer = tokenizer, pad_length = pad_length),
-        batch_size=batch_size
-    )
+    if max_size:
+        return DataLoader(
+            WikiSQLDataset(requests = prep_req_data[:max_size], tokenizer = tokenizer, pad_length = pad_length),
+            batch_size=batch_size
+        )
+    else:
+        return DataLoader(
+            WikiSQLDataset(requests = prep_req_data, tokenizer = tokenizer, pad_length = pad_length),
+            batch_size=batch_size
+        )

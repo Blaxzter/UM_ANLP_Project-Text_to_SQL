@@ -63,6 +63,46 @@ def train_epoch(models: Dict, train_data_loader, eval_data_loader, device, batch
                     writer = writer
                 )
 
+def get_eval(models: Dict, eval_data_loader, max_test_size, device):
+    with torch.no_grad():
+
+        for model in models.values():
+            model.eval()
+
+        loss_datas = {
+            model_name: [] for model_name in models.keys()
+        }
+
+        acc_datas = {
+            model_name: [] for model_name in models.keys()
+        }
+        counter = 0
+
+        with tqdm(eval_data_loader, desc = "Eval", unit = "it", leave=False) as eval_tepoch:
+            for d in eval_tepoch:
+                # Get sentence encoding
+                input_ids = d["input_ids"].to(device)
+                attention_mask = d["attention_mask"].to(device)
+                token_type_ids = d["token_type_ids"].to(device)
+
+                for key, model in models.items():
+                    loss, acc = model.train_model_step(d, device, input_ids, attention_mask, token_type_ids)
+                    loss_datas[key].append(loss)
+                    acc_datas[key].append(acc)
+
+                counter += 1
+
+                if counter > max_test_size:
+                    break
+
+    results = {}
+    for key, model in models.items():
+        loss = np.mean(loss_datas[key])
+        acc = np.mean(acc_datas[key])
+        results[key] = {"loss": loss, "acc": acc}
+
+    return results
+
 
 def eval_model(models: Dict, eval_data_loader, generation, device, writer = None):
     with torch.no_grad():
