@@ -87,8 +87,10 @@ def get_eval(models: Dict, eval_data_loader, max_test_size, device):
 
                 for key, model in models.items():
                     loss, acc = model.train_model_step(d, device, input_ids, attention_mask, token_type_ids)
-                    loss_datas[key].append(loss)
-                    acc_datas[key].append(acc)
+                    if str(loss) != "nan" or str(acc) != "nan":
+                        # loss, acc = model.train_model_step(d, device, input_ids, attention_mask, token_type_ids)
+                        loss_datas[key].append(loss)
+                        acc_datas[key].append(acc)
 
                 counter += 1
 
@@ -164,7 +166,7 @@ def load_model(path, data_loader, device, bert):
         qa_trainer = QABertTrainer(device, data_loader, bert, use_pretrained=False),
     )
     for name in models:
-        models[name].get_model().load_state_dict(torch.load(path + "/" + name + ".ckpt"))
+        models[name].get_model().load_state_dict(torch.load(path + "/" + name + ".ckpt", map_location=torch.device('cpu')))
         print(f"Loaded {name}")
     return models
 
@@ -214,7 +216,7 @@ def get_request(models, table_name, columns, types, question, tokenizer, device)
         start_index, end_index = qa_trainer.get_prediction(_qa_input_ids, _qa_token_type_ids, _qa_attention_mask)
 
         tokens = tokenizer.convert_ids_to_tokens(_qa_input_ids)
-        answer = ' '.join(tokens[start_index:end_index + 1])
+        answer = ' '.join(tokens[start_index:end_index])
         corrected_answer = ''
 
         for word in answer.split():
@@ -233,16 +235,16 @@ def get_request(models, table_name, columns, types, question, tokenizer, device)
     agg_ops = ['', 'MAX', 'MIN', 'COUNT', 'SUM', 'AVG']
     cond_dict = ['=', '>', '<', 'OP']
 
-    if aggregation==0:
+    if aggregation == 0:
         agg_col = columns[selected_column] + ' '
     else:
         agg_col = agg_ops[aggregation] + '(' + columns[selected_column] + ') '
 
-    select_part = 'SELECT ' + agg_col + 'FROM ' + table_name
+    select_part = 'SELECT ' + agg_col + '\nFROM "' + table_name + '" \n'
 
     produced_where_cond = "" if len(where_conditions) == 0 else " WHERE "
     for i, c_w_c in enumerate(where_conditions):
-        produced_where_cond += f'{c_w_c["column_name"]} {cond_dict[c_w_c["agg"]]} "{c_w_c["value"]}" '
+        produced_where_cond += f'{c_w_c["column_name"]} {cond_dict[c_w_c["agg"]]} "{str(c_w_c["value"]).strip()}" '
         if i < len(where_conditions) - 1:
             produced_where_cond += 'AND '
 
